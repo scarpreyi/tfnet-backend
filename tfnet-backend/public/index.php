@@ -23,28 +23,82 @@ $module = $filtered[0] ?? '';
 $action = $filtered[1] ?? '';
 $route  = "$module/$action";
 
-switch ($route) {
-    case 'config/app':              require __DIR__ . '/../api/config/app_config.php';             break;
-    case 'auth/register':           require __DIR__ . '/../api/auth/register.php';                 break;
-    case 'auth/login':              require __DIR__ . '/../api/auth/login.php';                    break;
-    case 'user/update-mac':         require __DIR__ . '/../api/user/update_mac.php';               break;
-    case 'plans/list':              require __DIR__ . '/../api/plans/list.php';                    break;
-    case 'orders/create':           require __DIR__ . '/../api/orders/create.php';                 break;
-    case 'vouchers/purchase':       require __DIR__ . '/../api/vouchers/purchase.php';             break;
-    case 'vouchers/status':         require __DIR__ . '/../api/vouchers/status.php';               break;
-    case 'session/status':          require __DIR__ . '/../api/session/status.php';                break;
-    case 'customer/status':         require __DIR__ . '/../api/customer/status.php';               break;
-    case 'transactions/history':    require __DIR__ . '/../api/transactions/history.php';          break;
-    case 'portal/submit':           require __DIR__ . '/../api/portal/submit.php';                 break;
-    case 'admin/orders':            require __DIR__ . '/../api/admin/orders.php';                  break;
-    case 'admin/confirm':           require __DIR__ . '/../api/admin/admin_confirm.php';           break;
-    case 'admin/reject':            require __DIR__ . '/../api/admin/reject.php';                  break;
-    case 'admin/sync':              require __DIR__ . '/../api/admin/sync.php';                    break;
-    case 'admin/stats':             require __DIR__ . '/../api/admin/stats.php';                   break;
-    case 'admin/new-orders':        require __DIR__ . '/../api/admin/new_orders.php';              break;
-    case 'customer/new-confirmations': require __DIR__ . '/../api/customer/new_confirmations.php'; break;
-    case 'customer/active-voucher':    require __DIR__ . '/../api/customer/active_voucher.php';    break;
-    default:
-        http_response_code(404);
-        echo json_encode(['error' => 'Endpoint not found', 'route' => $route]);
+// Health check endpoint
+if (empty($module) || $route === '/') {
+    http_response_code(200);
+    echo json_encode([
+        'status' => 'ok',
+        'message' => 'TFNET Backend API is running',
+        'version' => '1.0.0',
+        'timestamp' => date('Y-m-d H:i:s'),
+        'endpoints' => [
+            'config/app',
+            'auth/register',
+            'auth/login',
+            'user/update-mac',
+            'plans/list',
+            'orders/create',
+            'vouchers/purchase',
+            'vouchers/status',
+            'session/status',
+            'customer/status',
+            'transactions/history',
+            'portal/submit',
+            'admin/orders',
+            'admin/confirm',
+            'admin/reject',
+            'admin/sync',
+            'admin/stats',
+            'admin/new-orders',
+            'customer/new-confirmations',
+            'customer/active-voucher'
+        ]
+    ]);
+    exit;
 }
+
+// Router with file existence check
+$routes = [
+    'config/app'              => __DIR__ . '/../api/config/app_config.php',
+    'auth/register'           => __DIR__ . '/../api/auth/register.php',
+    'auth/login'              => __DIR__ . '/../api/auth/login.php',
+    'user/update-mac'         => __DIR__ . '/../api/user/update_mac.php',
+    'plans/list'              => __DIR__ . '/../api/plans/list.php',
+    'orders/create'           => __DIR__ . '/../api/orders/create.php',
+    'vouchers/purchase'       => __DIR__ . '/../api/vouchers/purchase.php',
+    'vouchers/status'         => __DIR__ . '/../api/vouchers/status.php',
+    'session/status'          => __DIR__ . '/../api/session/status.php',
+    'customer/status'         => __DIR__ . '/../api/customer/status.php',
+    'transactions/history'    => __DIR__ . '/../api/transactions/history.php',
+    'portal/submit'           => __DIR__ . '/../api/portal/submit.php',
+    'admin/orders'            => __DIR__ . '/../api/admin/orders.php',
+    'admin/confirm'           => __DIR__ . '/../api/admin/admin_confirm.php',
+    'admin/reject'            => __DIR__ . '/../api/admin/reject.php',
+    'admin/sync'              => __DIR__ . '/../api/admin/sync.php',
+    'admin/stats'             => __DIR__ . '/../api/admin/stats.php',
+    'admin/new-orders'        => __DIR__ . '/../api/admin/new_orders.php',
+    'customer/new-confirmations' => __DIR__ . '/../api/customer/new_confirmations.php',
+    'customer/active-voucher'    => __DIR__ . '/../api/customer/active_voucher.php',
+];
+
+if (array_key_exists($route, $routes)) {
+    $filePath = $routes[$route];
+    if (file_exists($filePath)) {
+        require $filePath;
+    } else {
+        http_response_code(503);
+        echo json_encode([
+            'error' => 'Endpoint not implemented',
+            'route' => $route,
+            'message' => 'This endpoint is being developed'
+        ]);
+    }
+} else {
+    http_response_code(404);
+    echo json_encode([
+        'error' => 'Endpoint not found',
+        'route' => $route,
+        'available_endpoints' => array_keys($routes)
+    ]);
+}
+?>
