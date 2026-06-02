@@ -17,15 +17,21 @@ RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' \
     sed -ri -e 's!/var/www/!/var/www/html/public!g' \
     /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
-# Allow .htaccess overrides
+# Create proper directory configuration with correct permissions
 RUN echo '<Directory /var/www/html/public>\n\
-    Options Indexes FollowSymLinks\n\
+    Options Indexes FollowSymLinks MultiViews\n\
     AllowOverride All\n\
     Require all granted\n\
+</Directory>\n\
+<Directory /var/www/html>\n\
+    Require all denied\n\
 </Directory>' > /etc/apache2/conf-available/tfnet.conf && \
-    a2enconf tfnet
+    a2enconf tfnet && \
+    a2disconf other-vhosts-access-log
 
 # Set permissions
-RUN chown -R www-data:www-data /var/www/html
+RUN chown -R www-data:www-data /var/www/html && \
+    chmod -R 755 /var/www/html && \
+    chmod -R 775 /var/www/html/public
 
 EXPOSE 80
