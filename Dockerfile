@@ -9,16 +9,16 @@ RUN docker-php-ext-install mysqli
 # Copy all project files to web root
 COPY . /var/www/html/
 
-# Set Apache document root to /public
-ENV APACHE_DOCUMENT_ROOT /var/www/html/public
+# Set Apache document root to the actual public directory
+ENV APACHE_DOCUMENT_ROOT /var/www/html/tfnet-backend/public
 
-RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' \
+RUN sed -ri -e 's!/var/www/html!/var/www/html/tfnet-backend/public!g' \
     /etc/apache2/sites-available/*.conf && \
-    sed -ri -e 's!/var/www/!/var/www/html/public!g' \
+    sed -ri -e 's!/var/www/!/var/www/html/tfnet-backend/public!g' \
     /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
 # Create proper directory configuration with correct permissions
-RUN echo '<Directory /var/www/html/public>\n\
+RUN echo '<Directory /var/www/html/tfnet-backend/public>\n\
     Options Indexes FollowSymLinks MultiViews\n\
     AllowOverride All\n\
     Require all granted\n\
@@ -29,9 +29,9 @@ RUN echo '<Directory /var/www/html/public>\n\
     a2enconf tfnet && \
     a2disconf other-vhosts-access-log
 
-# Set permissions
+# Set permissions - use correct paths
 RUN chown -R www-data:www-data /var/www/html && \
     chmod -R 755 /var/www/html && \
-    chmod -R 775 /var/www/html/public
+    chmod -R 775 /var/www/html/tfnet-backend/public
 
 EXPOSE 80
