@@ -3,9 +3,7 @@
 // Returns app configuration for white labeling
 // No auth required — called on app startup
 
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, ngrok-skip-browser-warning');
+require_once __DIR__ . '/../../config/bootstrap.php';
 
 // ─── App Configuration ────────────────────────────────────────────────────────
 // Edit these values to customize the app for each ISP customer

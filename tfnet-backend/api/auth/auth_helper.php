@@ -1,7 +1,8 @@
 <?php
+require_once __DIR__ . '/../../config/bootstrap.php';
 // ─── JWT Token Helper ─────────────────────────────────────────────────────────
 // Simple JWT-like token using base64 + HMAC
-define('JWT_SECRET', 'tfnet_secret_key_change_this_2024');
+define('JWT_SECRET', tfnet_env('JWT_SECRET', 'tfnet_secret_key_change_this_2024'));
 
 function generateToken($userId) {
     $payload = base64_encode(json_encode([

@@ -3,8 +3,6 @@
 // POST /transactions/history        — soft deletes an order (hidden_by_user = 1)
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../auth/auth_helper.php';
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, ngrok-skip-browser-warning');
 
 $userId = requireAuth();
 $db     = getDB();

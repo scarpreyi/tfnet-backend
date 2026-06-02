@@ -219,9 +219,7 @@ if ($omadaOnline && $customerMac && !$pendingSync) {
         }
 
         if ($isOnWifi) {
-            $portalUrl = 'https://127.0.0.1:8043/'
-                . '2163d67547fcf33c287f7c12b1850bdc'
-                . '/portal/auth';
+            $portalUrl = $omada->getPortalAuthUrl();
 
             $authData = http_build_query([
                 'clientMac'   => $customerMac,

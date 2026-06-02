@@ -9,9 +9,3 @@
     # Rewrite all requests to index.php
     RewriteRule ^(.*)$ index.php?$1 [QSA,L]
 </IfModule>
-
-<IfModule mod_headers.c>
-    Header set Access-Control-Allow-Origin "*"
-    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS, PUT, DELETE"
-    Header set Access-Control-Allow-Headers "Content-Type, Authorization, ngrok-skip-browser-warning"
-</IfModule>

@@ -22,6 +22,7 @@ if (!$clientMac) {
 }
 
 $db = getDB();
+$omada = new OmadaClient();
 
 // Find the most recent reserved voucher for this user
 $stmt = $db->prepare("
@@ -47,7 +48,7 @@ if (!$voucher) {
 }
 
 // Submit to Omada captive portal
-$portalUrl = 'https://127.0.0.1:8043/2163d67547fcf33c287f7c12b1850bdc/portal/auth';
+$portalUrl = $omada->getPortalAuthUrl();
 
 $authData  = http_build_query([
     'clientMac'   => $clientMac,

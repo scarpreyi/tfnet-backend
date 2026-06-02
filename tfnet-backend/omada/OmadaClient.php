@@ -1,13 +1,15 @@
 <?php
+require_once __DIR__ . '/../config/bootstrap.php';
+
 class OmadaClient {
 
-    private $baseUrl      = 'https://127.0.0.1:8043';
-    private $omadacId     = '2163d67547fcf33c287f7c12b1850bdc';
-    private $siteId       = '68e3d9d4e222cf7b32f63d02';
-    private $clientId     = '11299a5b0dea4ab0831098423909f842';
-    private $clientSecret = '436566816e7849f880ac4220d04366c7';
-    private $email        = 'tanakachakz@gmail.com';
-    private $password     = 'Chipochidzawo3!';
+    private $baseUrl      = '';
+    private $omadacId     = '';
+    private $siteId       = '';
+    private $clientId     = '';
+    private $clientSecret = '';
+    private $email        = '';
+    private $password     = '';
 
     // ── Voucher status constants (from Omada) ─────────────────────────────────
     const VOUCHER_UNUSED  = 0;
@@ -21,6 +23,13 @@ class OmadaClient {
     private $cookieFile     = null;
 
     public function __construct() {
+        $this->baseUrl      = rtrim((string) tfnet_env('OMADA_BASE_URL', 'https://127.0.0.1:8043'), '/');
+        $this->omadacId     = (string) tfnet_env('OMADA_ID', '2163d67547fcf33c287f7c12b1850bdc');
+        $this->siteId       = (string) tfnet_env('OMADA_SITE_ID', '');
+        $this->clientId     = (string) tfnet_env('OMADA_CLIENT_ID', '11299a5b0dea4ab0831098423909f842');
+        $this->clientSecret = (string) tfnet_env('OMADA_CLIENT_SECRET', '436566816e7849f880ac4220d04366c7');
+        $this->email        = (string) tfnet_env('OMADA_EMAIL', 'tanakachakz@gmail.com');
+        $this->password     = (string) tfnet_env('OMADA_PASSWORD', 'Chipochidzawo3!');
         $this->cookieFile = tempnam(sys_get_temp_dir(), 'omada_');
     }
 
@@ -33,6 +42,42 @@ class OmadaClient {
     public function getWebToken() {
         $this->ensureWebSession();
         return $this->webToken;
+    }
+
+    public function getPortalAuthUrl() {
+        return $this->baseUrl . '/' . $this->omadacId . '/portal/auth';
+    }
+
+    private function resolveSiteId() {
+        if ($this->siteId !== '') {
+            return $this->siteId;
+        }
+
+        $this->ensureApiToken();
+        if (!$this->apiToken) {
+            return null;
+        }
+
+        $url = $this->baseUrl . '/openapi/v1/' . $this->omadacId . '/sites';
+        $res = $this->curlGet($url, true);
+
+        $sites = $res['result']['data'] ?? $res['data'] ?? [];
+        if (is_array($sites) && (isset($sites['siteId']) || isset($sites['id']))) {
+            $sites = [$sites];
+        }
+
+        if (is_array($sites)) {
+            foreach ($sites as $site) {
+                $candidate = $site['siteId'] ?? $site['id'] ?? null;
+                if ($candidate !== null && $candidate !== '') {
+                    $this->siteId = (string) $candidate;
+                    return $this->siteId;
+                }
+            }
+        }
+
+        error_log('Omada site discovery failed: ' . json_encode($res));
+        return null;
     }
 
     // ─── OpenAPI Login ────────────────────────────────────────────────────────
@@ -107,9 +152,15 @@ class OmadaClient {
     // ─── CLIENTS ──────────────────────────────────────────────────────────────
     public function getActiveClients() {
         $this->ensureApiToken();
+        $siteId = $this->resolveSiteId();
+        if (!$siteId) {
+            error_log('Omada site ID could not be resolved for getActiveClients');
+            return [];
+        }
+
         $url = $this->baseUrl
              . '/openapi/v1/' . $this->omadacId
-             . '/sites/' . $this->siteId
+             . '/sites/' . $siteId
              . '/clients?filters.active=true&page=1&pageSize=200';
 
         $res = $this->curlGet($url, true);
@@ -128,9 +179,15 @@ class OmadaClient {
 
     public function disconnectClient($mac) {
         $this->ensureApiToken();
+        $siteId = $this->resolveSiteId();
+        if (!$siteId) {
+            error_log('Omada site ID could not be resolved for disconnectClient');
+            return ['error' => 'Unable to resolve Omada site ID'];
+        }
+
         $url = $this->baseUrl
              . '/openapi/v1/' . $this->omadacId
-             . '/sites/' . $this->siteId
+             . '/sites/' . $siteId
              . '/cmd/clients/disconnect';
 
         return $this->curlPost($url, json_encode(['mac' => $mac]), 'application/json', true);
@@ -139,8 +196,14 @@ class OmadaClient {
     // ─── VOUCHER GROUPS ───────────────────────────────────────────────────────
     public function getVoucherGroups() {
         $this->ensureWebSession();
+        $siteId = $this->resolveSiteId();
+        if (!$siteId) {
+            error_log('Omada site ID could not be resolved for getVoucherGroups');
+            return [];
+        }
+
         $url = $this->baseUrl . '/' . $this->omadacId
-             . '/api/v2/hotspot/sites/' . $this->siteId
+             . '/api/v2/hotspot/sites/' . $siteId
              . '/voucherGroups?currentPage=1&currentPageSize=50&token=' . $this->webToken;
 
         $res = $this->curlGetWeb($url);
@@ -150,9 +213,14 @@ class OmadaClient {
     // ─── VOUCHER CODES ────────────────────────────────────────────────────────
     public function getUnusedVoucherFromGroup($groupId, $count = 1) {
         $this->ensureWebSession();
+        $siteId = $this->resolveSiteId();
+        if (!$siteId) {
+            error_log('Omada site ID could not be resolved for getUnusedVoucherFromGroup');
+            return [];
+        }
 
         $url = $this->baseUrl . '/' . $this->omadacId
-             . '/api/v2/hotspot/sites/' . $this->siteId
+             . '/api/v2/hotspot/sites/' . $siteId
              . '/voucherGroups/' . $groupId
              . '?currentPage=1&currentPageSize=200&token=' . $this->webToken;
 
@@ -183,8 +251,14 @@ class OmadaClient {
 
     public function getVoucherByCode($code) {
         $this->ensureWebSession();
+        $siteId = $this->resolveSiteId();
+        if (!$siteId) {
+            error_log('Omada site ID could not be resolved for getVoucherByCode');
+            return null;
+        }
+
         $url = $this->baseUrl . '/' . $this->omadacId
-             . '/api/v2/hotspot/sites/' . $this->siteId
+             . '/api/v2/hotspot/sites/' . $siteId
              . '/vouchers?currentPage=1&currentPageSize=1'
              . '&searchField=code&searchKey=' . urlencode($code)
              . '&token=' . $this->webToken;
@@ -236,9 +310,15 @@ class OmadaClient {
     // ─── SITE STATS ───────────────────────────────────────────────────────────
     public function getSiteStats() {
         $this->ensureApiToken();
+        $siteId = $this->resolveSiteId();
+        if (!$siteId) {
+            error_log('Omada site ID could not be resolved for getSiteStats');
+            return ['error' => 'Unable to resolve Omada site ID'];
+        }
+
         $url = $this->baseUrl
              . '/openapi/v1/' . $this->omadacId
-             . '/sites/' . $this->siteId
+             . '/sites/' . $siteId
              . '/dashboard/overallClientStats';
 
         return $this->curlGet($url, true);
